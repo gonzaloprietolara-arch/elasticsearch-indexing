@@ -1,0 +1,125 @@
+# COMPROBAR QUE ELASTICSEARCH ESTÁ ARRANCADO
+
+curl -XGET 'http://localhost:9200/'
+
+
+# CREAR EL ÍNDICE CON EL TYPE Y CAMPOS
+
+curl -XPUT 'http://localhost:9200/pizzasmilan' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "mappings": {
+      "pizzas": {
+        "properties": {
+          "NombrePizza": { "type": "text" },
+          "Toppings":    { "type": "text" },
+          "Masa":        { "type": "text" },
+          "Tipo":        { "type": "text" },
+          "Precio":      { "type": "integer" }
+        }
+      }
+    }
+  }'
+
+
+# CARGAR LOS DATOS DESDE pizzasmilan.dataset.json
+
+cd /home/code/materialcurso
+
+curl -XPOST 'http://localhost:9200/pizzasmilan/_bulk?pretty' \
+  -H 'Content-Type: application/json' \
+  --data-binary @pizzasmilan.dataset.json
+
+
+# CONTAR LOS DOCUMENTOS INSERTADOS
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_count?pretty'
+
+
+# BUSCAR PIZZAS ENTRE 7 Y 9 EUROS
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "range": {
+        "Precio": {
+          "gte": 7,
+          "lte": 9
+        }
+      }
+    }
+  }'
+
+
+# BUSCAR PIZZAS CON MASA GRUESA
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "term": { "Masa": "gruesa" }
+    }
+  }'
+
+
+# LOCALIZAR LA PIZZA MÁS BARATA PARA OBTENER SU _id
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "size": 1,
+    "sort": [
+      { "Precio": "asc" }
+    ]
+  }'
+
+
+# SUSTITUIR ID_PIZZA_MAS_BARATA POR EL _id REAL OBTENIDO ARRIBA Y REDUCIR SU PRECIO EN UN EURO.
+
+curl -XPOST 'http://localhost:9200/pizzasmilan/pizzas/ID_PIZZA_MAS_BARATA/_update?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "doc": {
+      "Precio": 2
+    }
+  }'
+
+
+# BUSCAR LA PIZZA MADRID DE TIPO MEDIA PARA OBTENER SU _id
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "bool": {
+        "must": [
+          { "term": { "NombrePizza": "Madrid" } },
+          { "term": { "Tipo": "Media" } }
+        ]
+      }
+    }
+  }'
+
+
+# BORRAR LA PIZZA MADRID MEDIA USANDO EL _id REAL
+
+curl -XDELETE 'http://localhost:9200/pizzasmilan/pizzas/ID_PIZZA_MADRID_MEDIA?pretty'
+
+
+# COMPROBAR QUE LA PIZZA HA SIDO BORRADA
+
+curl -XGET 'http://localhost:9200/pizzasmilan/_search?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "bool": {
+        "must": [
+          { "term": { "NombrePizza": "madrid" } },
+          { "term": { "Tipo": "media" } }
+        ]
+      }
+    }
+  }'
+
+
